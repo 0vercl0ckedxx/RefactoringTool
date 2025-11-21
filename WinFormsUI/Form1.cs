@@ -1,5 +1,3 @@
-using System;
-using System.Windows.Forms;
 using Core.Interfaces;
 using Core.Models;
 using Core.Refactorings;
@@ -12,33 +10,33 @@ namespace WinFormsUI
         {
             InitializeComponent();
 
-            // ПІДКЛЮЧЕННЯ ПОДІЇ та ІНІЦІАЛІЗАЦІЯ
+            // Підключення події
             this.listBox1.SelectedIndexChanged += new EventHandler(this.listBox1_SelectedIndexChanged);
+
+            // Вибираємо перший елемент при старті
             if (listBox1.Items.Count > 0)
             {
-                listBox1.SelectedIndex = 0; // Вибір першого елементу для початкового налаштування UI
+                listBox1.SelectedIndex = 0;
             }
 
-            // Встановлення дефолтного коду
-            InputCodeTextBox.Text = @"public void UpdateUser(int userId, bool force)
-            {
-                int status = 1;
-                SaveToDb();
-            }";
-            MethodNameTextBox.Text = "SaveToDb";
-            MethodBodyTextBox.Text = "{ Console.WriteLine(\"Saved!\"); }";
+            // Дефолтний код для тестування
+            InputCodeTextBox.Text = @"public void CheckAccess()
+{
+    if (user.Age > 18 && user.HasLicense && !user.IsBanned)
+    {
+        GrantAccess();
+    }
+}";
         }
 
-        // Обробник зміни вибору у списку. Оновлює підписи.
+        // Метод оновлення написів та полів
         private void UpdateUIForSelectedRefactoring(string refactoringName)
         {
             this.Text = $"Refactoring Tool - {refactoringName}";
 
             string param1Label = "Параметр 1";
             string param2Label = "Параметр 2";
-
-            // За замовчуванням ховаємо додаткове поле
-            bool showDefaultValue = false;
+            bool showDefaultValue = false; // За замовчуванням ховаємо поле
 
             switch (refactoringName)
             {
@@ -50,12 +48,17 @@ namespace WinFormsUI
                 case "RemoveParameter":
                     param1Label = "Назва методу";
                     param2Label = "Назва параметра для видалення";
-                    showDefaultValue = true; // <--- ПОКАЗУЄМО ТІЛЬКИ ТУТ!
+                    showDefaultValue = true; // Показуємо для цього рефакторингу
                     break;
 
                 case "Rename Variable":
                     param1Label = "Старе ім'я змінної";
                     param2Label = "Нове ім'я змінної";
+                    break;
+
+                case "DecomposeConditional":
+                    param1Label = "Складна умова (напр. x > 5 && y < 10)";
+                    param2Label = "Назва нового методу (напр. IsValid)";
                     break;
 
                 default:
@@ -67,14 +70,17 @@ namespace WinFormsUI
             label2.Text = param1Label;
             label3.Text = param2Label;
 
-            // Керуємо видимістю нових елементів
-            labelDefaultValue.Visible = showDefaultValue;
-            DefaultValueTextBox.Visible = showDefaultValue;
+            // Керування видимістю поля DefaultValue
+            if (labelDefaultValue != null && DefaultValueTextBox != null)
+            {
+                labelDefaultValue.Visible = showDefaultValue;
+                DefaultValueTextBox.Visible = showDefaultValue;
+                DefaultValueTextBox.Text = "";
+            }
 
-            // Очищення
+            // Очищення полів
             MethodNameTextBox.Text = "";
             MethodBodyTextBox.Text = "";
-            DefaultValueTextBox.Text = "";
             ResultTextBox.Text = "";
         }
 
@@ -90,23 +96,21 @@ namespace WinFormsUI
         {
             if (listBox1.SelectedItem == null)
             {
-                MessageBox.Show("Будь ласка, оберіть рефакторинг зі списку.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Будь ласка, оберіть рефакторинг зі списку.", "Увага", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             string selectedRefactoringName = listBox1.SelectedItem.ToString();
+            string originalCode = InputCodeTextBox.Text;
 
-            // Отримання вхідних даних з НОВИХ полів:
-            string originalCode = InputCodeTextBox.Text; // <--- Використовуємо InputCodeTextBox
             string param1Value = MethodNameTextBox.Text.Trim();
             string param2Value = MethodBodyTextBox.Text.Trim();
 
-            // Очищення поля результату перед виконанням
-            ResultTextBox.Text = "";
+            ResultTextBox.Text = ""; // Очищення результату
 
             if (string.IsNullOrEmpty(param1Value))
             {
-                MessageBox.Show("Будь ласка, введіть параметр 1.", "Помилка введення", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Будь ласка, заповніть перше поле.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -116,76 +120,70 @@ namespace WinFormsUI
             switch (selectedRefactoringName)
             {
                 case "InlineMethod":
-                    if (string.IsNullOrEmpty(param2Value))
-                    {
-                        MessageBox.Show("Для InlineMethod потрібне тіло методу.", "Помилка введення", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть тіло методу.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new InlineMethodRefactoring();
                     parameters.Parameters["methodName"] = param1Value;
                     parameters.Parameters["methodBody"] = param2Value;
                     break;
 
                 case "RemoveParameter":
-                    if (string.IsNullOrEmpty(param2Value))
-                    {
-                        MessageBox.Show("Введіть назву параметра.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть назву параметра.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new RemoveParameterRefactoring();
                     parameters.Parameters["methodName"] = param1Value;
                     parameters.Parameters["parameterToRemove"] = param2Value;
-
-                    // === ДОДАЄМО ЦЕЙ БЛОК ===
-                    // Якщо поле видиме і не порожнє — передаємо значення
+                    // Додаємо defaultValue, якщо поле видиме і заповнене
                     if (DefaultValueTextBox.Visible && !string.IsNullOrWhiteSpace(DefaultValueTextBox.Text))
                     {
                         parameters.Parameters["defaultValue"] = DefaultValueTextBox.Text.Trim();
                     }
-                    // ========================
                     break;
 
                 case "Rename Variable":
-                    if (string.IsNullOrEmpty(param2Value))
-                    {
-                        MessageBox.Show("Для Rename Variable потрібне Нове ім'я.", "Помилка введення", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть нове ім'я.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new RenameVariableRefactoring();
                     parameters.Parameters["oldName"] = param1Value;
                     parameters.Parameters["newName"] = param2Value;
                     break;
 
+                case "DecomposeConditional":
+                    if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть назву нового методу.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                    refactoring = new DecomposeConditionalRefactoring();
+                    parameters.Parameters["condition"] = param1Value;       // Умова
+                    parameters.Parameters["newConditionName"] = param2Value; // Нова назва методу
+                    break;
+
                 default:
-                    MessageBox.Show($"Рефакторинг '{selectedRefactoringName}' не підтримується.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Рефакторинг '{selectedRefactoringName}' не підтримується або ще не реалізований.", "Інфо", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
             }
 
-            // Застосування рефакторингу
+            // Виконання рефакторингу
             if (refactoring != null)
             {
                 try
                 {
                     if (refactoring.CanApply(originalCode))
                     {
-                        string refactoredCode = refactoring.Apply(originalCode, parameters);
-
-                        // !!! ВІДОБРАЖЕННЯ РЕЗУЛЬТАТУ В НОВЕ ПОЛЕ !!!
-                        ResultTextBox.Text = refactoredCode; // <--- Тут виводиться результат
-
-                        MessageBox.Show($"{refactoring.Name} успішно застосовано!", "Готово", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        string result = refactoring.Apply(originalCode, parameters);
+                        ResultTextBox.Text = result;
+                        MessageBox.Show($"{refactoring.Name} виконано успішно!", "Успіх", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     else
                     {
-                        ResultTextBox.Text = originalCode; // Якщо застосувати не можна, виводимо оригінал
-                        MessageBox.Show($"Рефакторинг '{refactoring.Name}' не може бути застосовано до поточного коду.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        ResultTextBox.Text = originalCode;
+                        MessageBox.Show("Неможливо застосувати рефакторинг до цього коду.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Критична помилка при застосуванні {refactoring.Name}: {ex.Message}", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Помилка: {ex.Message}", "Критична помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private void ResultTextBox_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

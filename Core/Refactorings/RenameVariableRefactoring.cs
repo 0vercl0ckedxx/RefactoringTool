@@ -6,7 +6,7 @@ namespace Core.Refactorings
 {
     public class RenameVariableRefactoring : IRefactoring
     {
-        public string Name => "Rename Variable (Перейменування Змінної)";
+        public string Name => "Rename Variable (Перейменувати Змінну)";
         public string Description => "Перейменовує змінну та оновлює всі її використання, ігноруючи коментарі та рядкові літерали.";
 
         public bool CanApply(string code) => true;

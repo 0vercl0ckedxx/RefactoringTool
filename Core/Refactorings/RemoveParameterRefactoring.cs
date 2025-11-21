@@ -6,8 +6,8 @@ namespace Core.Refactorings
 {
     public class RemoveParameterRefactoring : IRefactoring
     {
-        public string Name => "Remove Parameter";
-        public string Description => "Removes a parameter from a method and updates all call sites.";
+        public string Name => "Remove Parameter (Видалити Параметр)";
+        public string Description => "Видаляє з методу параметр та оновлює усі виклики.";
 
         public bool CanApply(string code) => true;
 
@@ -22,22 +22,22 @@ namespace Core.Refactorings
                 return code;
             }
 
-            // 1. Знаходимо оголошення методу
+            // Знаходимо оголошення методу
+            // Використовуємо іменовану групу 'Args' для аргументів
             string declarationPattern = $@"\b{Regex.Escape(methodName)}\s*(?:<[^>]*>)?\s*\((?<Args>[^)]*)\)";
 
             string updatedCode = Regex.Replace(code, declarationPattern, (Match m) =>
             {
                 string originalArgs = m.Groups["Args"].Value;
 
-                // 2. Патерн параметра (Тип + Назва)
-                // (Кома в типі заборонена, щоб не захопити зайве)
-                string paramSignature = $@"(?:params\s+)?[\w\[\]<>?\s.]+\b{Regex.Escape(paramName)}\b\s*(?:=[^,)]*)?";
+                // Патерн параметра
+                // [^,)]*? -> пошук будь-чого, що не є комою або дужкою (тип, атрибути, модифікатори)
+                // \b{paramName}\b -> Точне ім'я параметра
+                string paramSignature = $@"(?:params\s+)?[^,)]*?\b{Regex.Escape(paramName)}\b\s*(?:=[^,)]*)?";
 
                 string newArgs = originalArgs;
 
-                // 3. Логіка "Розумного видалення":
-
-                // Крок А: Видаляємо ", параметр" (Середній або Останній)
+                // Логіка видалення
                 string commaBeforePattern = $@"\s*,\s*{paramSignature}";
 
                 if (Regex.IsMatch(newArgs, commaBeforePattern))
@@ -46,9 +46,6 @@ namespace Core.Refactorings
                 }
                 else
                 {
-                    // Крок Б: Видаляємо "параметр, " (Перший)
-                    // !!! ВИПРАВЛЕННЯ ТУТ !!!
-                    // Додано \s* в кінці, щоб видалити пробіл після коми
                     string commaAfterPattern = $@"\s*{paramSignature}\s*,\s*";
 
                     if (Regex.IsMatch(newArgs, commaAfterPattern))
@@ -57,17 +54,17 @@ namespace Core.Refactorings
                     }
                     else
                     {
-                        // Крок В: Видаляємо просто параметр (Єдиний)
-                        string singlePattern = $@"\s*{paramSignature}";
+                        string singlePattern = $@"\s*{paramSignature}\s*";
                         newArgs = Regex.Replace(newArgs, singlePattern, "");
                     }
                 }
 
+                // Формуємо новий заголовок методу
                 string prefix = code.Substring(m.Index, m.Groups["Args"].Index - m.Index);
                 return $"{prefix}{newArgs})";
             });
 
-            // 4. Заміна використання
+            // Заміна використання в тілі методу (якщо є дефолтне значення)
             if (!string.IsNullOrEmpty(defaultValue))
             {
                 string usagePattern = $@"\b{Regex.Escape(paramName)}\b";

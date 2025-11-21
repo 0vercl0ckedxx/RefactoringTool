@@ -58,7 +58,7 @@
             button1.Name = "button1";
             button1.Size = new Size(161, 72);
             button1.TabIndex = 2;
-            button1.Text = "Натисни для рефакторинга";
+            button1.Text = "Натисніть для рефакторингу";
             button1.UseVisualStyleBackColor = true;
             button1.Click += button1_Click;
             // 
@@ -101,11 +101,11 @@
             // listBox1
             // 
             listBox1.FormattingEnabled = true;
-            listBox1.Items.AddRange(new object[] { "InlineMethod", "Rename Variable", "RemoveParameter", "Ref4" });
+            listBox1.Items.AddRange(new object[] { "Вбудувати метод", "Перейменувати змінну", "Видалити параметр", "Декомпозиція умовного оператора" });
             listBox1.Location = new Point(384, 60);
             listBox1.Margin = new Padding(2);
             listBox1.Name = "listBox1";
-            listBox1.Size = new Size(161, 104);
+            listBox1.Size = new Size(279, 104);
             listBox1.TabIndex = 8;
             listBox1.SelectedIndexChanged += listBox1_SelectedIndexChanged;
             // 
@@ -118,6 +118,7 @@
             ResultTextBox.Size = new Size(321, 179);
             ResultTextBox.TabIndex = 9;
             ResultTextBox.Text = "";
+            ResultTextBox.TextChanged += ResultTextBox_TextChanged;
             // 
             // label4
             // 

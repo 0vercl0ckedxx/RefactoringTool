@@ -141,20 +141,11 @@ namespace Tests
         }
 
         [Fact]
-        // тест 9: декомпозиція працює для вкладених операторів
-        public void Apply_HandlesNestedConditionals()
+        // тест 9: декомпозиція працює в return statement
+        public void Apply_HandlesConditionInReturnStatement()
         {
             var refactoring = new DecomposeConditionalRefactoring();
-            string inputCode = @"
-               if (score < 0) { 
-                   status = ""Error""; 
-               } else { 
-                   if (score >= threshold || hasBonusPoints) { 
-                    status = ""Pass""; 
-                   } else { 
-                    status = ""Fail""; 
-                   } 
-               }";
+            string inputCode = @"return score >= threshold || hasBonusPoints;";
             var parameters = new RefactoringParameters();
             parameters.Parameters["condition"] = "score >= threshold || hasBonusPoints";
             parameters.Parameters["newConditionName"] = "isPassing";
@@ -163,16 +154,7 @@ namespace Tests
 
             string result = refactoring.Apply(inputCode, parameters);
 
-            Assert.Equal(@"
-               if (score < 0) { 
-                   status = ""Error""; 
-               } else { 
-                   if (isPassing()) { 
-                       status = ""Pass""; 
-                   } else { 
-                       status = ""Fail""; 
-                   } 
-               }", result);
+            Assert.Equal(@"return isPassing();", result);
         }
 
         [Fact]

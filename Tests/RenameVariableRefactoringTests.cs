@@ -1,18 +1,26 @@
-﻿namespace RefactorTool.Tests
+﻿using Core.Models;
+using Core.Refactorings;
+
+namespace Tests
 {
-    /// <summary>
-    /// Модульні тести для перевірки функціональності перейменування змінних.
-    /// </summary>
-    public class RenameVariableTests
+    public class RenameVariableRefactoringTests
     {
-        private readonly TextRefactorTool tool = new TextRefactorTool();
+        private readonly RenameVariableRefactoring refactoring = new RenameVariableRefactoring();
+        private string RunRefactoring(string code, string oldName, string newName)
+        {
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["oldName"] = oldName;
+            parameters.Parameters["newName"] = newName;
+
+            return refactoring.Apply(code, parameters);
+        }
 
         [Fact]
         public void Test_1_SimpleRename()
         {
             string code = "int m = 7;";
             string expected = "int n = 7;";
-            string result = tool.RenameVariable(code, "m", "n");
+            string result = RunRefactoring(code, "m", "n");
             Assert.Equal(expected, result);
         }
 
@@ -21,7 +29,7 @@
         {
             string code = "double p = 2.5, q = 4.1;";
             string expected = "double p = 2.5, r = 4.1;";
-            string result = tool.RenameVariable(code, "q", "r");
+            string result = RunRefactoring(code, "q", "r");
             Assert.Equal(expected, result);
         }
 
@@ -30,7 +38,7 @@
         {
             string code = "string city = \"Kyiv\"; // місто city";
             string expected = "string town = \"Kyiv\"; // місто city";
-            string result = tool.RenameVariable(code, "city", "town");
+            string result = RunRefactoring(code, "city", "town");
             Assert.Equal(expected, result);
         }
 
@@ -39,7 +47,7 @@
         {
             string code = "string title = \"Book\"; // назва title";
             string expected = "string title = \"Book\"; // назва title";
-            string result = tool.RenameVariable(code, "unknown", "newTitle");
+            string result = RunRefactoring(code, "unknown", "newTitle");
             Assert.Equal(expected, result);
         }
 
@@ -48,7 +56,7 @@
         {
             string code = "int r = 8, s = t + 12;";
             string expected = "int r = 8, r = t + 12;";
-            string result = tool.RenameVariable(code, "s", "r");
+            string result = RunRefactoring(code, "s", "r");
             Assert.Equal(expected, result);
         }
 
@@ -57,7 +65,7 @@
         {
             string code = "#include<iostream>\nint counter = 0; while(flag < 3)";
             string expected = "#include<iostream>\nint counter = 0; while(signal < 3)";
-            string result = tool.RenameVariable(code, "flag", "signal");
+            string result = RunRefactoring(code, "flag", "signal");
             Assert.Equal(expected, result);
         }
 
@@ -66,7 +74,7 @@
         {
             string code = "#include<iostream>\nint sum = 0; for(int k = 0; k < 5; k++)";
             string expected = "#include<iostream>\nint sum = 0; for(int index = 0; index < 5; index++)";
-            string result = tool.RenameVariable(code, "k", "index");
+            string result = RunRefactoring(code, "k", "index");
             Assert.Equal(expected, result);
         }
 
@@ -75,7 +83,7 @@
         {
             string code = "int multiply(int x, int y){return x*y;}";
             string expected = "int multiply(int a, int y){return a*y;}";
-            string result = tool.RenameVariable(code, "x", "a");
+            string result = RunRefactoring(code, "x", "a");
             Assert.Equal(expected, result);
         }
 
@@ -84,7 +92,7 @@
         {
             string code = "int p = 2, q = 3; if(p < q){p = p + q;}";
             string expected = "int r = 2, q = 3; if(r < q){r = r + q;}";
-            string result = tool.RenameVariable(code, "p", "r");
+            string result = RunRefactoring(code, "p", "r");
             Assert.Equal(expected, result);
         }
 
@@ -93,7 +101,7 @@
         {
             string code = "string user = \"user\"; // змінна user";
             string expected = "string account = \"user\"; // змінна user";
-            string result = tool.RenameVariable(code, "user", "account");
+            string result = RunRefactoring(code, "user", "account");
             Assert.Equal(expected, result);
         }
     }

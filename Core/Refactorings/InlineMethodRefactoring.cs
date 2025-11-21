@@ -6,7 +6,6 @@ namespace Core.Refactorings
     public class InlineMethodRefactoring : IRefactoring
     {
         public string Name => "Inline Method (Вбудувати Метод)";
-
         public string Description => "Вбудовує тіло простого методу замість його виклику.";
 
         public bool CanApply(string code)
