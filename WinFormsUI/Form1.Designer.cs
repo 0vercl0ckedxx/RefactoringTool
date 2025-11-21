@@ -177,15 +177,15 @@
         #endregion
 
         private Label label1;
-        private RichTextBox InputCodeTextBox; // ЗМІНЕНО
+        private RichTextBox InputCodeTextBox;
         private Button button1;
         private Label label2;
         private Label label3;
         private TextBox MethodNameTextBox;
         private TextBox MethodBodyTextBox;
         private ListBox listBox1;
-        private RichTextBox ResultTextBox; // ДОДАНО
-        private Label label4; // ДОДАНО
+        private RichTextBox ResultTextBox;
+        private Label label4;
         private Label labelDefaultValue;
         private TextBox DefaultValueTextBox;
     }

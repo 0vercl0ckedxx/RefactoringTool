@@ -40,23 +40,23 @@ namespace WinFormsUI
 
             switch (refactoringName)
             {
-                case "InlineMethod":
+                case "Вбудувати метод":
                     param1Label = "Назва методу для вбудовування";
                     param2Label = "Тіло методу (наприклад: { return 10; })";
                     break;
 
-                case "RemoveParameter":
+                case "Видалити параметр":
                     param1Label = "Назва методу";
                     param2Label = "Назва параметра для видалення";
-                    showDefaultValue = true; // Показуємо для цього рефакторингу
+                    showDefaultValue = true;
                     break;
 
-                case "Rename Variable":
+                case "Перейменувати змінну":
                     param1Label = "Старе ім'я змінної";
                     param2Label = "Нове ім'я змінної";
                     break;
 
-                case "DecomposeConditional":
+                case "Декомпозиція умовного оператора":
                     param1Label = "Складна умова (напр. x > 5 && y < 10)";
                     param2Label = "Назва нового методу (напр. IsValid)";
                     break;
@@ -119,14 +119,14 @@ namespace WinFormsUI
 
             switch (selectedRefactoringName)
             {
-                case "InlineMethod":
+                case "Вбудувати метод":
                     if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть тіло методу.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new InlineMethodRefactoring();
                     parameters.Parameters["methodName"] = param1Value;
                     parameters.Parameters["methodBody"] = param2Value;
                     break;
 
-                case "RemoveParameter":
+                case "Видалити параметр":
                     if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть назву параметра.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new RemoveParameterRefactoring();
                     parameters.Parameters["methodName"] = param1Value;
@@ -138,14 +138,14 @@ namespace WinFormsUI
                     }
                     break;
 
-                case "Rename Variable":
+                case "Перейменувати змінну":
                     if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть нове ім'я.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new RenameVariableRefactoring();
                     parameters.Parameters["oldName"] = param1Value;
                     parameters.Parameters["newName"] = param2Value;
                     break;
 
-                case "DecomposeConditional":
+                case "Декомпозиція умовного оператора":
                     if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть назву нового методу.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new DecomposeConditionalRefactoring();
                     parameters.Parameters["condition"] = param1Value;       // Умова
