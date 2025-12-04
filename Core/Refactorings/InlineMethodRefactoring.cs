@@ -1,4 +1,5 @@
-﻿using Core.Interfaces;
+﻿using System.Text.RegularExpressions;
+using Core.Interfaces;
 using Core.Models;
 
 namespace Core.Refactorings
@@ -23,11 +24,26 @@ namespace Core.Refactorings
                 return code;
             }
 
-            string callToFind = $"{methodName}();";
+            // --- Логіка для тесту 12 (Return) ---
+            if (methodBody.Contains("return"))
+            {
+                string tempBody = methodBody.Trim().TrimStart('{').TrimEnd('}').Trim();
+                if (tempBody.StartsWith("return"))
+                {
+                    methodBody = Regex.Replace(tempBody, @"^return\s+(.+?);$", "$1");
+                }
+            }
 
-            string result = code.Replace(callToFind, methodBody);
+            // --- ГОЛОВНА ЗАМІНА ---
+            string escapedName = Regex.Escape(methodName);
 
-            return result;
+            // ВИПРАВЛЕНИЙ ПАТЕРН: (?:\s*;)? гарантує, що пробіли зникнуть тільки разом з ;
+            string pattern = $@"\b{escapedName}\s*\(\s*\)(?:\s*;)?";
+
+            return Regex.Replace(code, pattern, match =>
+            {
+                return methodBody;
+            });
         }
     }
 }

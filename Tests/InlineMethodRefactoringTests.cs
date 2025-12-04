@@ -66,8 +66,8 @@ namespace Tests
         }
 
         [Fact]
-        // Тест 5: якщо між ім’ям методу і дужками є пробіли — заміна не відбувається
-        public void Apply_WithSpaces_StillWorks()
+        // Тест 5: перевірка, що рефакторинг спрацьовує навіть за наявності пробілів перед дужками
+        public void Apply_HandlesMethodCallWithSpaces()
         {
             var refactoring = new InlineMethodRefactoring();
             string inputCode = "void Main() { Foo (); }";
@@ -76,8 +76,7 @@ namespace Tests
             parameters.Parameters["methodBody"] = "{ int z = 9; }";
 
             string result = refactoring.Apply(inputCode, parameters);
-
-            Assert.Equal("void Main() { Foo (); }", result); // бо Replace шукає точне Foo();
+            Assert.Equal("void Main() { { int z = 9; } }", result);
         }
 
         [Fact]
@@ -134,11 +133,12 @@ namespace Tests
         }
 
         [Fact]
-        // Тест 10: замінюється лише точний виклик, а не схожі імена
+        // Тест 10: замінюється лише точний виклик (Foo), а схожі імена (FooBar) залишаються
         public void Apply_ReplacesOnlyExactCall()
         {
             var refactoring = new InlineMethodRefactoring();
             string inputCode = "void Main() { FooBar(); Foo(); }";
+
             var parameters = new RefactoringParameters();
             parameters.Parameters["methodName"] = "Foo";
             parameters.Parameters["methodBody"] = "{ int a = 1; }";
@@ -147,5 +147,41 @@ namespace Tests
 
             Assert.Equal("void Main() { FooBar(); { int a = 1; } }", result);
         }
+
+        [Fact]
+        // Тест 11: Перевірка збереження коментарів у тілі методу
+        public void Apply_PreservesCommentsInBody()
+        {
+            var refactoring = new InlineMethodRefactoring();
+            string inputCode = "void Main() { DoWork(); }";
+
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["methodName"] = "DoWork";
+            // Тіло методу містить коментар
+            parameters.Parameters["methodBody"] = "{ // TODO: Fix logic \n int x = 0; }";
+
+            string expected = "void Main() { { // TODO: Fix logic \n int x = 0; } }";
+
+            string result = refactoring.Apply(inputCode, parameters);
+
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        // Тест 12: Вбудовування методу з RETURN у вираз
+        public void Apply_HandlesReturnStatementInExpression()
+        {
+            var refactoring = new InlineMethodRefactoring();
+            string inputCode = "void Main() { int y = GetFive() + 10; }";
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["methodName"] = "GetFive";
+            parameters.Parameters["methodBody"] = "{ return 5; }";
+            string expected = "void Main() { int y = 5 + 10; }";
+
+            string result = refactoring.Apply(inputCode, parameters);
+
+            Assert.Equal(expected, result);
+        }
+
     }
 }
