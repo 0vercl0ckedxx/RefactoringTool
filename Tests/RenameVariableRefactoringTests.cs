@@ -104,5 +104,38 @@ namespace Tests
             string result = RunRefactoring(code, "user", "account");
             Assert.Equal(expected, result);
         }
+
+        [Fact]
+        public void Test_11_RenameInsideMultilineComment()
+        {
+            string code =
+                "int a = 5;\n" +
+                "/*\n" +
+                "    a inside comment should NOT change\n" +
+                "*/\n" +
+                "a = a + 1;";
+
+            string expected =
+                "int x = 5;\n" +
+                "/*\n" +
+                "    a inside comment should NOT change\n" +
+                "*/\n" +
+                "x = x + 1;";
+
+            string result = RunRefactoring(code, "a", "x");
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        public void Test_12_DoNotRenameInsideCharLiteral()
+        {
+            string code = "char c = 'a'; // символ a";
+
+            // очікується, що 'a' в одинарних лапках НЕ змінюємо
+            string expected = "char c = 'a'; // символ a";
+
+            string result = RunRefactoring(code, "a", "z");
+            Assert.Equal(expected, result);
+        }
     }
 }

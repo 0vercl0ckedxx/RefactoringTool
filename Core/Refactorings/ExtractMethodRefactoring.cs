@@ -11,8 +11,8 @@ namespace Core.Refactorings
 {
 public class ExtractMethodRefactoring : IRefactoring
 {
-        public string Name => "Extract Method";
-        public string Description => "Refactors code by extracting a block into a new method.";
+        public string Name => "Extract Method (Виділити Метод)";
+        public string Description => "Виділяє блок коду в новий метод.";
         public bool CanApply(string code)
     {
         int braceOpen = code.IndexOf('{');

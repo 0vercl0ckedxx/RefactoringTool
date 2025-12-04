@@ -7,7 +7,7 @@ namespace Core.Refactorings
     public class RenameVariableRefactoring : IRefactoring
     {
         public string Name => "Rename Variable (Перейменувати Змінну)";
-        public string Description => "Перейменовує змінну та оновлює всі її використання, ігноруючи коментарі та рядкові літерали.";
+        public string Description => "Перейменовує змінну та оновлює всі її використання.";
 
         public bool CanApply(string code) => true;
 
@@ -19,15 +19,16 @@ namespace Core.Refactorings
             if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName))
                 return code;
 
-            // Патерн для безпечної заміни
-            string pattern = $@"(""[^""]*"")|(//[^\n]*)|\b{Regex.Escape(oldName)}\b";
+            // Патерн для безпечної заміни. Додано обробку символьних літералів та багаторядкових коментарів.
+            // Групи: 1. Рядок | 2. Символ | 3. Однорядковий коментар | 4. Багаторядковий коментар | 5. Змінна
+            string pattern = $@"(""[^""]*"")|('[^']*')|(//[^\n]*)|(/\*[\s\S]*?\*/)|\b{Regex.Escape(oldName)}\b";
 
             return Regex.Replace(code, pattern, match =>
             {
                 string value = match.Value;
 
-                // Ігноруємо коментарі та рядки
-                if (value.StartsWith("\"") || value.StartsWith("//"))
+                // Ігноруємо рядки, символи та всі типи коментарів
+                if (value.StartsWith("\"") || value.StartsWith("'") || value.StartsWith("//") || value.StartsWith("/*"))
                     return value;
 
                 // Замінюємо, якщо це справжня змінна
