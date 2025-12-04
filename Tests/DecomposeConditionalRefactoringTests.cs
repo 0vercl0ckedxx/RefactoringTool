@@ -189,5 +189,53 @@ namespace Tests
                }", result);
         }
 
+        [Fact]
+        // тест 11: якщо умова всередині рядка, змін не буде
+        public void Apply_IgnoresStrings()
+        {
+            var refactoring = new DecomposeConditionalRefactoring();
+            string inputCode = @"
+            string log = ""Checking if score >= threshold || hasBonusPoints..."";
+            if (score >= threshold || hasBonusPoints) { status = ""Pass""; } else { status = ""Fail""; }";
+
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["condition"] = "score >= threshold || hasBonusPoints";
+            parameters.Parameters["newConditionName"] = "isPassing";
+            parameters.Parameters["branchTrue"] = @"status = ""Pass"";";
+            parameters.Parameters["branchFalse"] = @"status = ""Fail"";";
+
+            string result = refactoring.Apply(inputCode, parameters);
+
+            string expected = @"
+            string log = ""Checking if score >= threshold || hasBonusPoints..."";
+            if (isPassing()) { status = ""Pass""; } else { status = ""Fail""; }";
+
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        // тест 12: якщо умова всередині коментаря, змін не буде
+        public void Apply_IgnoresComments()
+        {
+            var refactoring = new DecomposeConditionalRefactoring();
+            string inputCode = @"
+               // TODO: simplify score >= threshold || hasBonusPoints
+               if (score >= threshold || hasBonusPoints) { status = ""Pass""; } else { status = ""Fail""; }";
+
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["condition"] = "score >= threshold || hasBonusPoints";
+            parameters.Parameters["newConditionName"] = "isPassing";
+            parameters.Parameters["branchTrue"] = @"status = ""Pass"";";
+            parameters.Parameters["branchFalse"] = @"status = ""Fail"";";
+
+            string result = refactoring.Apply(inputCode, parameters);
+
+            string expected = @"
+               // TODO: simplify score >= threshold || hasBonusPoints
+               if (isPassing()) { status = ""Pass""; } else { status = ""Fail""; }";
+
+            Assert.Equal(expected, result);
+        }
+
     }
 }
