@@ -23,25 +23,43 @@ namespace Core.Refactorings
             // формування коректного виклику методу
             string methodCall = $"{newMethodName}()";
 
-            // створення версії умови, загорнутої у дужки; приклад: "(score >= threshold ...)"
-            // щоб прибрати зайві дужки коло виклику методу при обробці тернарних операторів
-            string patternWithParentheses = $"({condition})";
+            // перетворення умови на безпечний для Regex рядок: оператори Regex будуть ігноруватися
+            string escapedCondition = Regex.Escape(condition);
 
-            if (code.Contains(patternWithParentheses))  // якщо в коді зустрічається умова в дужках
+            // шаблон для пошуку:
+            // група 1 - умова в рядках
+            // група 2 - умова в коментарях
+            // група 3 - умова в дужках (щоб прибрати зайві дужки коло виклику методу при обробці тернарних операторів)
+            // група 4 - нічим не оточена умова
+            string pattern = $@"(""[^""]*"")|(//[^\n]*)|(\(\s*{escapedCondition}\s*\))|({escapedCondition})";
+
+            return Regex.Replace(code, pattern, match =>
             {
-                // потрібно з'ясувати, чи це тернарний оператор
-                // застосування регулярного виразу
-                bool requiresParentheses = Regex.IsMatch(code, $@"\b(if|while|switch)\s*{Regex.Escape(patternWithParentheses)}");
-
-                // якщо це не if, не while, не switch, то обробка тернаного оператора
-                if (!requiresParentheses)
+                // якщо умова зустрічається у рядку чи коментарі, її буде повернено без змін
+                if (match.Groups[1].Success || match.Groups[2].Success)
                 {
-                    return code.Replace(patternWithParentheses, methodCall);
+                    return match.Value;
                 }
-            }
 
-            // стандартна заміна
-            return code.Replace(condition, methodCall);
+                // якщо в коді зустрічається умова у дужках
+                if (match.Groups[3].Success)
+                {
+                    // потрібно з'ясувати, чи це тернарний оператор
+                    // перевірка регулярним виразом тексту перед знайденим блоком на наявність if, while, switch
+                    string textBefore = code.Substring(0, match.Index);
+                    bool requiresParentheses = Regex.IsMatch(textBefore, @"\b(if|while|switch)\s*$");
+                    // якщо це if, while чи switch, то навколо методу потрібні дужки
+                    if (requiresParentheses)
+                    {
+                        return $"({methodCall})";
+                    }
+                    // якщо це не if, не while, не switch, то обробка тернаного оператора
+                    return methodCall;
+                }
+
+                // стандартна заміна
+                return methodCall;
+            });
         }
     }
 }
