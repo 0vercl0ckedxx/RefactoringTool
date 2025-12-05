@@ -26,7 +26,7 @@ namespace Core.Refactorings
                 return code;
             }
 
-            // КРОК 1: Знаходимо базовий індекс параметра в оголошенні методу
+            // Знаходимо базовий індекс параметра в оголошенні методу
             int paramIndex = GetParameterDefinitionIndex(code, methodName, paramName);
 
             if (paramIndex == -1)
@@ -34,10 +34,10 @@ namespace Core.Refactorings
                 return code;
             }
 
-            // КРОК 2: Розумне видалення аргументів (враховуючи іменовані параметри)
+            // Видалення аргументів, враховуючи іменовані параметри
             string updatedCode = RemoveArgumentSmart(code, methodName, paramIndex, paramName);
 
-            // КРОК 3: Безпечна заміна в тілі методу (ігноруючи рядки)
+            // Безпечна заміна в тілі методу, ігноруючи рядки
             if (!string.IsNullOrEmpty(defaultValue))
             {
                 updatedCode = ReplaceIdentifierSafe(updatedCode, paramName, defaultValue);
@@ -48,11 +48,7 @@ namespace Core.Refactorings
 
         private int GetParameterDefinitionIndex(string code, string methodName, string paramName)
         {
-            // Шукаємо оголошення методу. 
-            // Відрізняємо оголошення від виклику наявністю типу перед параметром, 
-            // але для простоти шукаємо входження, де аргумент містить точне слово paramName
-            // і це слово не є частиною конструкції "name: value" (хоча в оголошенні це "Type Name").
-
+            // Шукаємо оголошення методу
             string pattern = $@"\b{Regex.Escape(methodName)}\s*(?:<[^>]*>)?\s*\((?<Args>[^)]*)\)";
             var matches = Regex.Matches(code, pattern);
 
@@ -61,9 +57,6 @@ namespace Core.Refactorings
                 var args = SplitArguments(match.Groups["Args"].Value);
                 for (int i = 0; i < args.Count; i++)
                 {
-                    // В оголошенні параметр виглядає як "int width" або "string text".
-                    // Перевіряємо, чи є слово paramName окремим словом.
-                    // Також важливо: в оголошенні це НЕ "paramName:", це просто "Type paramName".
                     if (Regex.IsMatch(args[i], $@"\b{Regex.Escape(paramName)}\b") &&
                         !args[i].Trim().StartsWith(paramName + ":"))
                     {
@@ -86,7 +79,7 @@ namespace Core.Refactorings
 
                 int indexToRemove = -1;
 
-                // 1. ПРІОРИТЕТ: Шукаємо іменований аргумент (наприклад "width: 100")
+                // Шукаємо іменований аргумент
                 for (int i = 0; i < argsList.Count; i++)
                 {
                     // Перевірка: чи починається аргумент з "paramName:"
@@ -96,9 +89,6 @@ namespace Core.Refactorings
                         break;
                     }
                 }
-
-                // 2. ФОЛБЕК: Якщо іменований аргумент не знайдено, використовуємо індекс з оголошення
-                // Це спрацює для звичайних викликів Method(1, 2) та самого оголошення void Method(int a, int b)
                 if (indexToRemove == -1)
                 {
                     indexToRemove = defaultIndex;
