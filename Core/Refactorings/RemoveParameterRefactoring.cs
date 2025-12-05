@@ -1,4 +1,8 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using Core.Interfaces;
 using Core.Models;
 
@@ -7,7 +11,7 @@ namespace Core.Refactorings
     public class RemoveParameterRefactoring : IRefactoring
     {
         public string Name => "Remove Parameter (Видалити Параметр)";
-        public string Description => "Видаляє з методу параметр та оновлює усі виклики.";
+        public string Description => "Видаляє параметр з оголошення та викликів.";
 
         public bool CanApply(string code) => true;
 
@@ -22,56 +26,162 @@ namespace Core.Refactorings
                 return code;
             }
 
-            // Знаходимо оголошення методу
-            // Використовуємо іменовану групу 'Args' для аргументів
-            string declarationPattern = $@"\b{Regex.Escape(methodName)}\s*(?:<[^>]*>)?\s*\((?<Args>[^)]*)\)";
+            // КРОК 1: Знаходимо базовий індекс параметра в оголошенні методу
+            int paramIndex = GetParameterDefinitionIndex(code, methodName, paramName);
 
-            string updatedCode = Regex.Replace(code, declarationPattern, (Match m) =>
+            if (paramIndex == -1)
             {
-                string originalArgs = m.Groups["Args"].Value;
+                return code;
+            }
 
-                // Патерн параметра
-                // [^,)]*? -> пошук будь-чого, що не є комою або дужкою (тип, атрибути, модифікатори)
-                // \b{paramName}\b -> Точне ім'я параметра
-                string paramSignature = $@"(?:params\s+)?[^,)]*?\b{Regex.Escape(paramName)}\b\s*(?:=[^,)]*)?";
+            // КРОК 2: Розумне видалення аргументів (враховуючи іменовані параметри)
+            string updatedCode = RemoveArgumentSmart(code, methodName, paramIndex, paramName);
 
-                string newArgs = originalArgs;
-
-                // Логіка видалення
-                string commaBeforePattern = $@"\s*,\s*{paramSignature}";
-
-                if (Regex.IsMatch(newArgs, commaBeforePattern))
-                {
-                    newArgs = Regex.Replace(newArgs, commaBeforePattern, "");
-                }
-                else
-                {
-                    string commaAfterPattern = $@"\s*{paramSignature}\s*,\s*";
-
-                    if (Regex.IsMatch(newArgs, commaAfterPattern))
-                    {
-                        newArgs = Regex.Replace(newArgs, commaAfterPattern, "");
-                    }
-                    else
-                    {
-                        string singlePattern = $@"\s*{paramSignature}\s*";
-                        newArgs = Regex.Replace(newArgs, singlePattern, "");
-                    }
-                }
-
-                // Формуємо новий заголовок методу
-                string prefix = code.Substring(m.Index, m.Groups["Args"].Index - m.Index);
-                return $"{prefix}{newArgs})";
-            });
-
-            // Заміна використання в тілі методу (якщо є дефолтне значення)
+            // КРОК 3: Безпечна заміна в тілі методу (ігноруючи рядки)
             if (!string.IsNullOrEmpty(defaultValue))
             {
-                string usagePattern = $@"\b{Regex.Escape(paramName)}\b";
-                updatedCode = Regex.Replace(updatedCode, usagePattern, defaultValue);
+                updatedCode = ReplaceIdentifierSafe(updatedCode, paramName, defaultValue);
             }
 
             return updatedCode;
+        }
+
+        private int GetParameterDefinitionIndex(string code, string methodName, string paramName)
+        {
+            // Шукаємо оголошення методу. 
+            // Відрізняємо оголошення від виклику наявністю типу перед параметром, 
+            // але для простоти шукаємо входження, де аргумент містить точне слово paramName
+            // і це слово не є частиною конструкції "name: value" (хоча в оголошенні це "Type Name").
+
+            string pattern = $@"\b{Regex.Escape(methodName)}\s*(?:<[^>]*>)?\s*\((?<Args>[^)]*)\)";
+            var matches = Regex.Matches(code, pattern);
+
+            foreach (Match match in matches)
+            {
+                var args = SplitArguments(match.Groups["Args"].Value);
+                for (int i = 0; i < args.Count; i++)
+                {
+                    // В оголошенні параметр виглядає як "int width" або "string text".
+                    // Перевіряємо, чи є слово paramName окремим словом.
+                    // Також важливо: в оголошенні це НЕ "paramName:", це просто "Type paramName".
+                    if (Regex.IsMatch(args[i], $@"\b{Regex.Escape(paramName)}\b") &&
+                        !args[i].Trim().StartsWith(paramName + ":"))
+                    {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        private string RemoveArgumentSmart(string code, string methodName, int defaultIndex, string paramName)
+        {
+            // Знаходимо всі місця (виклики та оголошення)
+            string pattern = $@"\b{Regex.Escape(methodName)}\s*(?:<[^>]*>)?\s*\((?<Args>.*?)\)";
+
+            return Regex.Replace(code, pattern, m =>
+            {
+                string originalArgs = m.Groups["Args"].Value;
+                var argsList = SplitArguments(originalArgs);
+
+                int indexToRemove = -1;
+
+                // 1. ПРІОРИТЕТ: Шукаємо іменований аргумент (наприклад "width: 100")
+                for (int i = 0; i < argsList.Count; i++)
+                {
+                    // Перевірка: чи починається аргумент з "paramName:"
+                    if (Regex.IsMatch(argsList[i].Trim(), $@"^{Regex.Escape(paramName)}\s*:"))
+                    {
+                        indexToRemove = i;
+                        break;
+                    }
+                }
+
+                // 2. ФОЛБЕК: Якщо іменований аргумент не знайдено, використовуємо індекс з оголошення
+                // Це спрацює для звичайних викликів Method(1, 2) та самого оголошення void Method(int a, int b)
+                if (indexToRemove == -1)
+                {
+                    indexToRemove = defaultIndex;
+                }
+
+                // Виконуємо видалення, якщо індекс валідний
+                if (indexToRemove >= 0 && indexToRemove < argsList.Count)
+                {
+                    argsList.RemoveAt(indexToRemove);
+                }
+
+                // Збираємо рядок назад
+                string newArgs = string.Join(", ", argsList.Select(a => a.Trim()));
+
+                // Відновлюємо префікс до дужок
+                int argsIndexInMatch = m.Groups["Args"].Index - m.Index;
+                string prefix = m.Value.Substring(0, argsIndexInMatch);
+
+                return $"{prefix}{newArgs})";
+            }, RegexOptions.Singleline);
+        }
+
+        private List<string> SplitArguments(string argsStr)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrWhiteSpace(argsStr)) return result;
+
+            int parenthesisLevel = 0;
+            int angleBracketLevel = 0;
+            int curlyBracketLevel = 0;
+            bool insideString = false;
+            char stringChar = '\0';
+
+            StringBuilder currentArg = new StringBuilder();
+
+            for (int i = 0; i < argsStr.Length; i++)
+            {
+                char c = argsStr[i];
+
+                if ((c == '"' || c == '\'') && (i == 0 || argsStr[i - 1] != '\\'))
+                {
+                    if (insideString && c == stringChar) insideString = false;
+                    else if (!insideString) { insideString = true; stringChar = c; }
+                }
+
+                if (!insideString)
+                {
+                    if (c == '(') parenthesisLevel++;
+                    else if (c == ')') parenthesisLevel--;
+                    else if (c == '{') curlyBracketLevel++;
+                    else if (c == '}') curlyBracketLevel--;
+                    else if (c == '<') angleBracketLevel++;
+                    else if (c == '>') angleBracketLevel--;
+                }
+
+                if (c == ',' && parenthesisLevel == 0 && angleBracketLevel == 0 && curlyBracketLevel == 0 && !insideString)
+                {
+                    result.Add(currentArg.ToString());
+                    currentArg.Clear();
+                }
+                else
+                {
+                    currentArg.Append(c);
+                }
+            }
+
+            if (currentArg.Length > 0)
+                result.Add(currentArg.ToString());
+
+            return result;
+        }
+
+        private string ReplaceIdentifierSafe(string code, string identifier, string replacement)
+        {
+            // Ігноруємо рядки та char, замінюємо тільки код
+            string pattern = $@"(@?""(?:""""|[^""])*"")|('[^']*')|(\b{Regex.Escape(identifier)}\b)";
+
+            return Regex.Replace(code, pattern, m =>
+            {
+                if (m.Groups[1].Success || m.Groups[2].Success) return m.Value;
+                if (m.Groups[3].Success) return replacement;
+                return m.Value;
+            }, RegexOptions.Singleline);
         }
     }
 }

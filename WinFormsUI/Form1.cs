@@ -34,9 +34,14 @@ namespace WinFormsUI
         {
             this.Text = $"Refactoring Tool - {refactoringName}";
 
+            // === ВИПРАВЛЕННЯ ТУТ ===
+            // Скидаємо стан полів у "активний" за замовчуванням перед кожною зміною
+            MethodBodyTextBox.Enabled = true;
+            // =======================
+
             string param1Label = "Параметр 1";
             string param2Label = "Параметр 2";
-            bool showDefaultValue = false; // За замовчуванням ховаємо поле
+            bool showDefaultValue = false; // За замовчуванням ховаємо поле defaultValue
 
             switch (refactoringName)
             {
@@ -59,6 +64,13 @@ namespace WinFormsUI
                 case "Декомпозиція умовного оператора":
                     param1Label = "Складна умова (напр. x > 5 && y < 10)";
                     param2Label = "Назва нового методу (напр. IsValid)";
+                    break;
+
+                case "Виділити метод":
+                    param1Label = "Назва нового методу";
+                    param2Label = "";
+                    // Тут ми спеціально вимикаємо поле, бо воно не потрібне
+                    MethodBodyTextBox.Enabled = false;
                     break;
 
                 default:
@@ -108,6 +120,7 @@ namespace WinFormsUI
 
             ResultTextBox.Text = ""; // Очищення результату
 
+            // Базова перевірка першого поля (обов'язкове для всіх)
             if (string.IsNullOrEmpty(param1Value))
             {
                 MessageBox.Show("Будь ласка, заповніть перше поле.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -131,7 +144,7 @@ namespace WinFormsUI
                     refactoring = new RemoveParameterRefactoring();
                     parameters.Parameters["methodName"] = param1Value;
                     parameters.Parameters["parameterToRemove"] = param2Value;
-                    // Додаємо defaultValue, якщо поле видиме і заповнене
+
                     if (DefaultValueTextBox.Visible && !string.IsNullOrWhiteSpace(DefaultValueTextBox.Text))
                     {
                         parameters.Parameters["defaultValue"] = DefaultValueTextBox.Text.Trim();
@@ -148,8 +161,13 @@ namespace WinFormsUI
                 case "Декомпозиція умовного оператора":
                     if (string.IsNullOrEmpty(param2Value)) { MessageBox.Show("Введіть назву нового методу.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                     refactoring = new DecomposeConditionalRefactoring();
-                    parameters.Parameters["condition"] = param1Value;       // Умова
-                    parameters.Parameters["newConditionName"] = param2Value; // Нова назва методу
+                    parameters.Parameters["condition"] = param1Value;
+                    parameters.Parameters["newConditionName"] = param2Value;
+                    break;
+
+                case "Виділити метод":
+                    refactoring = new ExtractMethodRefactoring();
+                    parameters.Parameters["newMethodName"] = param1Value;
                     break;
 
                 default:
@@ -171,7 +189,7 @@ namespace WinFormsUI
                     else
                     {
                         ResultTextBox.Text = originalCode;
-                        MessageBox.Show("Неможливо застосувати рефакторинг до цього коду.", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Неможливо застосувати рефакторинг до цього коду (перевірте синтаксис або наявність елементів).", "Помилка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 }
                 catch (Exception ex)

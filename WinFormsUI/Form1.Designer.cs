@@ -101,7 +101,7 @@
             // listBox1
             // 
             listBox1.FormattingEnabled = true;
-            listBox1.Items.AddRange(new object[] { "Вбудувати метод", "Перейменувати змінну", "Видалити параметр", "Декомпозиція умовного оператора" });
+            listBox1.Items.AddRange(new object[] { "Вбудувати метод", "Перейменувати змінну", "Видалити параметр", "Декомпозиція умовного оператора", "Виділити метод" });
             listBox1.Location = new Point(384, 60);
             listBox1.Margin = new Padding(2);
             listBox1.Name = "listBox1";

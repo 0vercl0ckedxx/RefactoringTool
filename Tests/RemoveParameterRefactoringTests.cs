@@ -195,5 +195,53 @@ namespace Tests
             // Assert
             Assert.Equal(expectedCode, actualCode);
         }
+        // Тест 11: Видалення параметра при використанні іменованих аргументів (Named Arguments)
+        [Fact]
+        public void Apply_Removes_CorrectParameter_When_NamedArgumentsUsed()
+        {
+            // Arrange
+            var refactoring = new RemoveParameterRefactoring();
+            string inputCode =
+                "public void Resize(int width, int height) { }\n" +
+                "public void Main() { Resize(height: 100, width: 50); }";
+
+            string expectedCode =
+                "public void Resize(int height) { }\n" +
+                "public void Main() { Resize(height: 100); }";
+
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["methodName"] = "Resize";
+            parameters.Parameters["parameterToRemove"] = "width";
+
+            // Act
+            string actualCode = refactoring.Apply(inputCode, parameters);
+
+            // Assert
+            Assert.Equal(expectedCode, actualCode);
+        }
+        // Тест 12: Видалення параметра в іменованих аргументах, де порядок змінено
+        [Fact]
+        public void Apply_Removes_CorrectParameter_When_NamedArguments_Are_Swapped()
+        {
+            // Arrange
+            var refactoring = new RemoveParameterRefactoring();
+            string inputCode =
+                "public void Save(string text, bool encrypt) { }\n" +
+                "public void Main() { Save(encrypt: true, text: \"data\"); }";
+
+            string expectedCode =
+                "public void Save(string text) { }\n" +
+                "public void Main() { Save(text: \"data\"); }";
+
+            var parameters = new RefactoringParameters();
+            parameters.Parameters["methodName"] = "Save";
+            parameters.Parameters["parameterToRemove"] = "encrypt";
+
+            // Act
+            string actualCode = refactoring.Apply(inputCode, parameters);
+
+            // Assert
+            Assert.Equal(expectedCode, actualCode);
+        }
     }
 }
